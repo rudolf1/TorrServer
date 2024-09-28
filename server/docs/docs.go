@@ -749,6 +749,9 @@ const docTemplate = `{
                     "description": "0 - don` + "`" + `t add, 1 - add retrackers (def), 2 - remove retrackers 3 - replace retrackers",
                     "type": "integer"
                 },
+                "rutorSearchAddr": {
+                    "type": "string"
+                },
                 "sslCert": {
                     "type": "string"
                 },
