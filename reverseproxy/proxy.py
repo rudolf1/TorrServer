@@ -69,8 +69,8 @@ async def stats_handler(request):
             'total_cnt': f"{sum([1 for k,v  in items.items()]):_}",
             'download_speed': f"{limiter._estimated_speed:_}"
         },
+        'priority': {str(k): v for k, v in priority.items()},
         'items': cache_dump,
-        'priority': {str(k): v for k, v in priority.items()}
     }
     return web.Response(
         text=json.dumps(stats, indent=2, ensure_ascii=False),
