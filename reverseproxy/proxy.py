@@ -46,6 +46,36 @@ class Chunk:
 
 
 priority = {}
+async def stats_handler(request):
+    items = await response_cache.allItems()
+    cache_dump = {}
+    for k, v in items.items():
+        cache_dump[str(k)] = {
+            'key': str(v.key),
+            'len': f"{v.len:_}",
+            'chd': f"{sum(i.len() for i in v.chunks.values()):_}",
+            'url': v.url,
+            'headers': dict(v.headers),
+            'params': dict(v.params),
+            'method': v.method,
+            'cachePath': v.cachePath,
+            'chunks': f"{len(v.chunks.keys()):_}",
+        }
+    stats = {
+        'size': {
+            'total_size': f"{sum([v.len for k,v  in items.items()]):_}",
+            'chunks_size': f"{sum([v1.len() for k,v in items.items() for v1 in v.chunks.values()]):_}",
+            'chunks_cnt': f"{sum([len(v.chunks) for k,v in items.items()]):_}",
+            'total_cnt': f"{sum([1 for k,v  in items.items()]):_}",
+            'download_speed': f"{limiter._estimated_speed:_}"
+        },
+        'items': cache_dump,
+        'priority': {str(k): v for k, v in priority.items()}
+    }
+    return web.Response(
+        text=json.dumps(stats, indent=2, ensure_ascii=False),
+        content_type='application/json'
+    )
 
 class CacheEntry:
     def __init__(self, key, headReponseHeaders, url, headers, params, method):
@@ -202,9 +232,10 @@ async def verifirer():
     # TODO Locks
     pass
 
+limiter = DownloadSpeedLimiter(200000)
+
 async def downloader():
     global priority
-    limiter = DownloadSpeedLimiter(200000)
     while True:
         try:
             async with aiohttp.ClientSession() as session:
@@ -219,6 +250,11 @@ async def downloader():
                     
                     if len(queuekeys) == 0:
                         print(f"Nothing to download, sleeping")
+                        await asyncio.sleep(10)
+                        continue
+                    if limiter.max_speed == 0:
+                        print(f"Download disabled, sleeping")
+                        limiter._estimated_speed = 0
                         await asyncio.sleep(10)
                         continue
                     priority = {}
@@ -390,6 +426,7 @@ def main():
         backend_url = sys.argv[1]
     app = web.Application()
     app['backend_url'] = backend_url
+    app.router.add_get('/stats', stats_handler)
     app.router.add_route('*', '/{tail:.*}', proxy_handler)
     loop = asyncio.new_event_loop()
     loop.create_task(downloader())
