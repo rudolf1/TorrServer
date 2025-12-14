@@ -353,6 +353,7 @@ func (t *Torrent) Status() *state.TorrentStatus {
 				return utils2.CompareStrings(files[i].Path(), files[j].Path())
 			})
 			for i, f := range files {
+				// f.
 				st.FileStats = append(st.FileStats, &state.TorrentFileStat{
 					Id:     i + 1, // in web id 0 is undefined
 					Path:   f.Path(),

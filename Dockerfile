@@ -34,19 +34,23 @@ ARG TARGETARCH
 ENV GOARCH=$TARGETARCH
 
 # Build torrserver
-RUN apk add --update g++ \
-&& go run gen_web.go \
-&& cd server \
-&& go mod tidy \
-&& go clean -i -r -cache \
-&& go build -ldflags '-w -s' --o "torrserver" ./cmd
+### BUILD TORRSERVER MULTIARCH START ###
+FROM --platform=$BUILDPLATFORM builder AS builder1
+
+RUN apk add --update g++
+
+RUN go run gen_web.go \
+    && cd server \
+    && go mod tidy \
+    && go clean -i -r -cache \
+    && go build -ldflags '-w -s' --o "torrserver" ./cmd
 ### BUILD TORRSERVER MULTIARCH END ###
 
 
 ### UPX COMPRESSING START ###
 FROM ubuntu AS compressed
 
-COPY --from=builder /opt/src/server/torrserver ./torrserver
+COPY --from=builder1 /opt/src/server/torrserver ./torrserver
 
 RUN apt update && apt install -y upx-ucl && upx --best --lzma ./torrserver
 # Compress torrserver only for amd64 and arm64 no variant platforms
